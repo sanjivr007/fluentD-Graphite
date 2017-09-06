@@ -1,6 +1,5 @@
 require 'fluent/mixin/rewrite_tag_name'
 
-
 class Fluent::GraphiteOutput < Fluent::Output
   Fluent::Plugin.register_output('graphite', self)
 
@@ -76,20 +75,30 @@ class Fluent::GraphiteOutput < Fluent::Output
 
     metrics = {}
     tag = tag.sub(/\.$/, '') # may include a dot at the end of the emit_tag fluent-mixin-rewrite-tag-name returns. remove it.
+    key=""
+    value=0
     filtered_record.each do |k, v|
-      key = case @tag_for
+     log.warn "ddddddd #{k} #{v}"
+     if (k.to_s).eql? @name_keys[0]
+        key = case @tag_for
             when 'ignore' then k.to_s
-            when 'prefix' then "#{tag}.#{k}"
-            when 'suffix' then "#{k}.#{tag}"
+            when 'prefix' then "#{tag}.#{v}"
+            when 'suffix' then "#{v}.#{tag}"
             end
 
-      key = key.gsub(/(\s|\/)+/, '_') # cope with in the case of containing symbols or spaces in the key of the record like in_dstat.
-      metrics[key] = v.to_f
-    end
+        key = key.gsub(/(\s|\/)+/, '_') # cope with in the case of containing symbols or spaces in the key of the record like in_dstat.
+      elsif (k.to_s).eql? @name_keys[1]
+        value=v.to_f        
+      end     
+    end 
+    log.warn "break #{key} #{value}"
+    metrics[key] = value  
+    log.warn "break2 #{metrics}"  
     metrics
   end
 
   def post(metrics, time)
+    log.warn "break3 #{metrics} #{time}"
     trial ||= 1
     @client.metrics(metrics, time)
   rescue Errno::ETIMEDOUT
@@ -114,3 +123,4 @@ class Fluent::GraphiteOutput < Fluent::Output
     @client = GraphiteAPI.new(graphite: "#{@host}:#{@port}")
   end
 end
+
